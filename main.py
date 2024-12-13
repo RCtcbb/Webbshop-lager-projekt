@@ -5,7 +5,7 @@ import csv
 conn = sqlite3.connect(':memory:')
 cursor = conn.cursor()
 
-# Skapa en tabell i SQLite-databasen
+# Skapa en tabell för att lagra persondata
 cursor.execute('''
 CREATE TABLE people (
     id INTEGER PRIMARY KEY,
@@ -15,48 +15,41 @@ CREATE TABLE people (
 )
 ''')
 
-# Läs in CSV-filen
-csv_file = 'data.csv'  # Set the path to your CSV file
+# Läs CSV-filen och lägg till data i databasen
+csv_file = 'data.csv'
 
 with open(csv_file, 'r') as file:
     reader = csv.reader(file)
-    
-    # Skipping header row if it exists
-    next(reader, None)  # Skips the header row
+    next(reader, None)  # Hoppa över header-raden
 
     for row in reader:
-        print(f"Processing row: {row}")  # Debugging: print the row to inspect it
-        
-        # Ignore rows that are empty or don't have enough columns
-        if len(row) < 4:  # Check if there are enough columns (id, name, year, tracks)
-            print(f"Raden ignoreras på grund av otillräcklig data: {row}")
-            continue
+        if len(row) < 4:
+            continue  # Ignorera rader med otillräcklig data
 
-        # Extract data for each column
         id = row[0]
         name = row[1]
         try:
-            year = int(row[2])  # Convert year to integer
-            tracks = int(row[3])  # Convert tracks to integer
+            year = int(row[2])  # Försök konvertera år till heltal
+            tracks = int(row[3])  # Försök konvertera spår till heltal
         except ValueError:
-            print(f"Ogiltig data för år eller antal spår för {name}, raden ignoreras.")
-            continue
+            continue  # Om data inte är korrekt, hoppa över raden
         
-        # Insert the row into the database
+        # Lägg till personen i databasen
         cursor.execute('INSERT INTO people (id, name, year, tracks) VALUES (?, ?, ?, ?)', (id, name, year, tracks))
 
-# Spara ändringar och stäng anslutningen
+# Spara ändringar i databasen
 conn.commit()
 
+# Funktion för att visa alla poster i tabellen
 def display_table():
     cursor.execute("SELECT * FROM people")
     rows = cursor.fetchall()
-
     print("# | NAMN                     | ÅR   | TOTALA SPÅR")
     print("--|--------------------------|-------|-------------")
     for row in rows:
         print(f"{row[0]:<2} | {row[1]:<24} | {row[2]:<5} | {row[3]:<11}")
 
+# Funktion för att lägga till en ny post
 def add_entry():
     name = input("Ange namn: ")
     year = int(input("Ange år: "))
@@ -65,17 +58,20 @@ def add_entry():
     conn.commit()
     print("Posten har lagts till.")
 
+# Funktion för att ta bort en post baserat på ID
 def remove_entry():
     entry_id = int(input("Ange ID för posten som ska tas bort: "))
     cursor.execute('DELETE FROM people WHERE id = ?', (entry_id,))
     conn.commit()
     print("Posten har tagits bort.")
 
+# Funktion för att uppdatera en post
 def update_entry():
     entry_id = int(input("Ange ID för posten som ska uppdateras: "))
     column = input("Ange vilken kolumn som ska uppdateras (name, year, tracks): ")
     new_value = input("Ange det nya värdet: ")
 
+    # Om kolumnen är "year" eller "tracks", konvertera det nya värdet till heltal
     if column == "year" or column == "tracks":
         new_value = int(new_value)
 
@@ -93,6 +89,7 @@ while True:
 
     choice = input("Välj ett alternativ: ")
 
+    # Hantera användarens val
     if choice == "1":
         display_table()
     elif choice == "2":
@@ -106,5 +103,5 @@ while True:
     else:
         print("Ogiltigt val, försök igen.")
 
-# Stäng databasen
+# Stäng databasen efter att alla operationer är slutförda
 conn.close()
